@@ -5,51 +5,68 @@ import os
 from pathlib import Path
 import dj_database_url
 from dotenv import load_dotenv
+from datetime import timedelta
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# -----------------------------------------------------------
+# Base Directory
+# -----------------------------------------------------------
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# --- Load Environment Variables ---
-# This will read your .env file
+# -----------------------------------------------------------
+# Load Environment Variables
+# -----------------------------------------------------------
 load_dotenv(BASE_DIR / '.env')
 
-# --- Quick-start development settings ---
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY')
+# -----------------------------------------------------------
+# Security
+# -----------------------------------------------------------
+SECRET_KEY = os.environ.get('SECRET_KEY', 'default-insecure-key-for-dev')
 
-# SECURITY WARNING: don't run with debug on in production!
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+# Debug:
+# - Auto False in Render production
+# - True only when running locally
+DEBUG = os.environ.get('DEBUG') == 'True' or ('RENDER' not in os.environ)
 
+# -----------------------------------------------------------
+# Allowed Hosts
+# -----------------------------------------------------------
 ALLOWED_HOSTS = []
-# Vercel will add its own domain here in production
+
+# Render's hostname
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
-
-# --- Application definition ---
+# -----------------------------------------------------------
+# Installed Apps
+# -----------------------------------------------------------
 INSTALLED_APPS = [
+    'daphne',
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
-    # Our app
+
+    # Local app
     'api.apps.ApiConfig',
-    
-    # 3rd Party Apps
+
+    # Third-party apps
     'rest_framework',
     'rest_framework_simplejwt',
     'djoser',
     'corsheaders',
 ]
 
+# -----------------------------------------------------------
+# Middleware
+# -----------------------------------------------------------
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',  # CORS Middleware
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -57,8 +74,16 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# -----------------------------------------------------------
+# URL / WSGI / ASGI
+# -----------------------------------------------------------
 ROOT_URLCONF = 'rawlink_backend.urls'
+WSGI_APPLICATION = 'rawlink_backend.wsgi.application'
+ASGI_APPLICATION = 'rawlink_backend.asgi.application'
 
+# -----------------------------------------------------------
+# Templates
+# -----------------------------------------------------------
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -75,102 +100,111 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'rawlink_backend.wsgi.application'
-
-
-# --- Database ---
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-
+# -----------------------------------------------------------
+# Database (Neon/Render)
+# -----------------------------------------------------------
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 DATABASES = {
     'default': dj_database_url.config(
         default=DATABASE_URL,
         conn_max_age=600,
-        ssl_require=True  # Neon requires SSL
+        ssl_require=True,
     )
 }
 
-
-# --- Password validation ---
-# https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
-
+# -----------------------------------------------------------
+# Password Validation
+# -----------------------------------------------------------
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-
-# --- Internationalization ---
-# https://docs.djangoproject.com/en/4.2/topics/i18n/
-
+# -----------------------------------------------------------
+# Internationalization
+# -----------------------------------------------------------
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-
-# --- Static files (CSS, JavaScript, Images) ---
-# https://docs.djangoproject.com/en/4.2/howto/static-files/
-
+# -----------------------------------------------------------
+# Static / Media
+# -----------------------------------------------------------
 STATIC_URL = 'static/'
-# This is where Vercel will collect static files
 STATIC_ROOT = BASE_DIR / 'staticfiles_build' / 'static'
 
-
-# --- Media files (User Uploads) ---
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-
-# --- Default primary key field type ---
-# https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-
-# --- Custom User Model ---
+# -----------------------------------------------------------
+# Custom User Model
+# -----------------------------------------------------------
 AUTH_USER_MODEL = 'api.User'
 
-
-# --- CORS (Cross-Origin Resource Sharing) Settings ---
-# This allows your React app (on localhost:3000) to talk to this API
+# -----------------------------------------------------------
+# CORS
+# -----------------------------------------------------------
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    # Add your Vercel frontend later, e.g.:
+    # "https://rawlink-frontend.vercel.app",
 ]
 
-
-# --- Django REST Framework (DRF) Settings ---
+# -----------------------------------------------------------
+# Django REST Framework
+# -----------------------------------------------------------
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
 }
 
-# --- Djoser (Auth) Settings ---
-# We will configure this more later
-
-# --- JWT (Token) Settings ---
+# -----------------------------------------------------------
+# JWT Settings
+# -----------------------------------------------------------
 SIMPLE_JWT = {
-   'AUTH_HEADER_TYPES': ('JWT',),
+    'AUTH_HEADER_TYPES': ('JWT',),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
 }
 
-# --- Djoser (Auth) Settings ---
-# This tells Djoser to use our custom serializer for registration
+# -----------------------------------------------------------
+# Djoser Settings
+# -----------------------------------------------------------
 DJOSER = {
     'SERIALIZERS': {
         'user_create': 'api.serializers.UserCreateSerializer',
         'user': 'api.serializers.UserSerializer',
     },
 }
+
+# -----------------------------------------------------------
+# Channels / WebSocket Layer
+# -----------------------------------------------------------
+
+if 'REDIS_URL' in os.environ:
+    # Production with Redis
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [os.environ.get('REDIS_URL')],
+            },
+        },
+    }
+else:
+    # Local development fallback
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer",
+        },
+    }
