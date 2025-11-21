@@ -1,5 +1,6 @@
 """
 Django settings for rawlink_backend project.
+Merged and cleaned version.
 """
 import os
 from pathlib import Path
@@ -15,24 +16,25 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # -----------------------------------------------------------
 # Load Environment Variables
 # -----------------------------------------------------------
+# Reads .env at project root (BASE_DIR / '.env')
 load_dotenv(BASE_DIR / '.env')
 
 # -----------------------------------------------------------
 # Security
 # -----------------------------------------------------------
-SECRET_KEY = os.environ.get('SECRET_KEY', 'default-insecure-key-for-dev')
+# SECRET_KEY: prefer env var; fallback to a dev key (DO NOT use fallback in production)
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-key')
 
-# Debug:
-# - Auto False in Render production
-# - True only when running locally
+# DEBUG:
+# - If DEBUG env var explicitly set to 'True' use it.
+# - Otherwise, treat presence of RENDER env var as production (DEBUG=False).
 DEBUG = os.environ.get('DEBUG') == 'True' or ('RENDER' not in os.environ)
+# (If you want stricter behavior, change above to only rely on env var.)
 
 # -----------------------------------------------------------
 # Allowed Hosts
 # -----------------------------------------------------------
 ALLOWED_HOSTS = []
-
-# Render's hostname
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
@@ -65,6 +67,7 @@ INSTALLED_APPS = [
 # -----------------------------------------------------------
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # serve static files in production
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -101,10 +104,9 @@ TEMPLATES = [
 ]
 
 # -----------------------------------------------------------
-# Database (Neon/Render)
+# Database (Neon/Render or local fallback)
 # -----------------------------------------------------------
 DATABASE_URL = os.environ.get('DATABASE_URL')
-
 DATABASES = {
     'default': dj_database_url.config(
         default=DATABASE_URL,
@@ -135,11 +137,18 @@ USE_TZ = True
 # Static / Media
 # -----------------------------------------------------------
 STATIC_URL = 'static/'
+# when running on Render/production, collectstatic should populate STATIC_ROOT
 STATIC_ROOT = BASE_DIR / 'staticfiles_build' / 'static'
-
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Whitenoise staticfiles storage in production (only use when DEBUG is False)
+if not DEBUG:
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# -----------------------------------------------------------
+# Default primary key field
+# -----------------------------------------------------------
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # -----------------------------------------------------------
@@ -153,8 +162,7 @@ AUTH_USER_MODEL = 'api.User'
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    # Add your Vercel frontend later, e.g.:
-    # "https://rawlink-frontend.vercel.app",
+    # add frontend host(s) here when available
 ]
 
 # -----------------------------------------------------------
@@ -188,11 +196,9 @@ DJOSER = {
 }
 
 # -----------------------------------------------------------
-# Channels / WebSocket Layer
+# Channels / WebSocket Layer (Redis in prod, InMemory in dev)
 # -----------------------------------------------------------
-
 if 'REDIS_URL' in os.environ:
-    # Production with Redis
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
@@ -202,7 +208,6 @@ if 'REDIS_URL' in os.environ:
         },
     }
 else:
-    # Local development fallback
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels.layers.InMemoryChannelLayer",

@@ -1,6 +1,6 @@
 asgiref==3.10.0
 attrs==25.4.0
-autobahn==25.10.2
+autobahn
 Automat==25.4.16
 certifi==2025.11.12
 cffi==2.0.0
