@@ -1,3 +1,5 @@
+setuptools>=61
+cryptography>=45.0.7,<47
 asgiref
 channels
 channels_redis
