@@ -162,6 +162,7 @@ AUTH_USER_MODEL = 'api.User'
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "https://rawlink-frontend.vercel.app",
+    'https://rawlink-api.onrender.com',
     # add frontend host(s) here when available
 ]
 CSRF_TRUSTED_ORIGINS = [
