@@ -6,18 +6,20 @@ from channels.middleware import BaseMiddleware
 from channels.exceptions import DenyConnection
 from django.contrib.auth.models import AnonymousUser
 from rest_framework_simplejwt.tokens import AccessToken
-from api.models import User
 
-# Configure logger
 logger = logging.getLogger("ws_auth")
+
 
 @database_sync_to_async
 def get_user_from_token(token_key: str):
     """
     Fetch user from JWT token.
-    Returns User object or raises exception.
+    Model import is inside function to avoid AppRegistryNotReady.
     """
     try:
+        # Import User model here, after Django apps are ready
+        from api.models import User
+
         token = AccessToken(token_key)
         user_id = token['user_id']
         user = User.objects.get(id=user_id)
@@ -29,28 +31,22 @@ def get_user_from_token(token_key: str):
 
 
 class JwtAuthMiddleware(BaseMiddleware):
-    """
-    Middleware for JWT authentication in Django Channels.
-    Supports query string and Authorization header.
-    """
-
     async def __call__(self, scope, receive, send):
         try:
             token = None
 
-            # 1️⃣ Try query string first
+            # Get token from query string
             query_string = scope.get("query_string", b"").decode("utf-8")
             params = parse_qs(query_string)
             token = params.get("token", [None])[0]
 
-            # 2️⃣ Fallback to Authorization header if not in query string
+            # Fallback to Authorization header
             if not token:
                 headers = dict(scope.get("headers", []))
                 auth_header = headers.get(b'authorization', b'').decode()
                 if auth_header.startswith("Bearer "):
                     token = auth_header.split(" ")[1]
 
-            # 3️⃣ Get user or deny connection
             if token:
                 scope['user'] = await get_user_from_token(token)
                 if scope['user'].is_anonymous:
