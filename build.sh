@@ -2,10 +2,10 @@
 # Exit on error
 set -o errexit
 
-# Upgrade pip, setuptools, and wheel to the latest versions
+# Upgrade pip and setuptools to avoid build errors
 pip install --upgrade pip setuptools wheel
 
-# Install dependencies from requirements.txt
+# Install dependencies
 pip install -r requirements.txt
 
 # Collect static files
