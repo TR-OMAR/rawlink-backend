@@ -1,15 +1,13 @@
 #!/usr/bin/env bash
-# Exit on error
 set -o errexit
+set -o pipefail
 
-# Upgrade pip to handle dependency resolution better
-pip install --upgrade pip
+# use explicit python3 binary (Render images commonly expose python3)
+python3 -m pip install --upgrade pip setuptools wheel
 
-# Install dependencies
-pip install -r requirements.txt
+# install deps (now pip is modern and will pick compatible wheels)
+python3 -m pip install -r requirements.txt
 
-# Collect static files
-python manage.py collectstatic --no-input
-
-# Run database migrations
-python manage.py migrate
+# django steps
+python3 manage.py collectstatic --noinput
+python3 manage.py migrate --noinput
