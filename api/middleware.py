@@ -1,16 +1,16 @@
 from channels.db import database_sync_to_async
 from channels.middleware import BaseMiddleware
-from rest_framework_simplejwt.tokens import AccessToken
 from urllib.parse import parse_qs
 
-# Move these imports inside functions to avoid AppRegistryNotReady
-# from django.contrib.auth.models import AnonymousUser 
-# from api.models import User
+# REMOVED: from rest_framework_simplejwt.tokens import AccessToken (Moved inside function)
 
 @database_sync_to_async
 def get_user(token_key):
     from django.contrib.auth.models import AnonymousUser
     from api.models import User
+    # Import AccessToken here so it doesn't run at startup
+    from rest_framework_simplejwt.tokens import AccessToken
+    
     try:
         token = AccessToken(token_key)
         user_id = token['user_id']
