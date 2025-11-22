@@ -1,5 +1,5 @@
 setuptools>=61
-cryptography=43.0.3
+cryptography
 pyOpenSSL==23.3.0
 asgiref
 channels
