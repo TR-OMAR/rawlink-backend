@@ -1,5 +1,6 @@
 setuptools>=61
-cryptography>=45.0.7,<47
+cryptography=43.0.3
+pyOpenSSL==23.3.0
 asgiref
 channels
 channels_redis
