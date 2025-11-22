@@ -1,65 +1,42 @@
-import logging
-from urllib.parse import parse_qs
-
+from django.contrib.auth.models import AnonymousUser
 from channels.db import database_sync_to_async
 from channels.middleware import BaseMiddleware
-from channels.exceptions import DenyConnection
-from django.contrib.auth.models import AnonymousUser
 from rest_framework_simplejwt.tokens import AccessToken
-
-logger = logging.getLogger("ws_auth")
-
+# Removed top-level import of User to fix AppRegistryNotReady error
+# from api.models import User 
+from urllib.parse import parse_qs
 
 @database_sync_to_async
-def get_user_from_token(token_key: str):
-    """
-    Fetch user from JWT token.
-    Model import is inside function to avoid AppRegistryNotReady.
-    """
+def get_user(token_key):
     try:
-        # Import User model here, after Django apps are ready
+        # Import User model here to avoid AppRegistryNotReady
         from api.models import User
-
+        
         token = AccessToken(token_key)
         user_id = token['user_id']
         user = User.objects.get(id=user_id)
-        logger.info(f"✅ WS Auth Success: User {user.username} (ID: {user.id})")
+        print(f"✅ WS MIDDLEWARE: User found: {user.username} (ID: {user.id})")
         return user
     except Exception as e:
-        logger.warning(f"❌ WS Auth Token Error: {e}")
+        print(f"❌ WS MIDDLEWARE: Token Error: {e}")
         return AnonymousUser()
-
 
 class JwtAuthMiddleware(BaseMiddleware):
     async def __call__(self, scope, receive, send):
         try:
-            token = None
-
-            # Get token from query string
+            # Get the token from the query string
             query_string = scope.get("query_string", b"").decode("utf-8")
             params = parse_qs(query_string)
             token = params.get("token", [None])[0]
-
-            # Fallback to Authorization header
-            if not token:
-                headers = dict(scope.get("headers", []))
-                auth_header = headers.get(b'authorization', b'').decode()
-                if auth_header.startswith("Bearer "):
-                    token = auth_header.split(" ")[1]
-
+            
             if token:
-                scope['user'] = await get_user_from_token(token)
-                if scope['user'].is_anonymous:
-                    logger.warning("⚠️ WS Auth: Invalid token, anonymous user assigned")
-                    raise DenyConnection("Unauthorized")
+                print(f"🔍 WS MIDDLEWARE: Token received: {token[:10]}...")
+                scope['user'] = await get_user(token)
             else:
-                logger.warning("⚠️ WS Auth: No token provided")
-                raise DenyConnection("Unauthorized")
-
-        except DenyConnection as e:
-            raise e
+                print("⚠️ WS MIDDLEWARE: No token found in URL")
+                scope['user'] = AnonymousUser()
         except Exception as e:
-            logger.error(f"❌ WS Middleware Error: {e}")
-            raise DenyConnection("Unauthorized")
-
+             print(f"❌ WS MIDDLEWARE: Critical Error: {e}")
+             scope['user'] = AnonymousUser()
+            
         return await super().__call__(scope, receive, send)
