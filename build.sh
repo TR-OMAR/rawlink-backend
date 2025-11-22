@@ -2,7 +2,7 @@
 # Exit on error
 set -o errexit
 
-# Upgrade pip to handle modern dependency resolution
+# Upgrade pip and setuptools to avoid build errors
 pip install --upgrade pip setuptools wheel
 
 # Install dependencies
