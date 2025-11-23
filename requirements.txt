@@ -46,3 +46,5 @@ tzdata
 urllib3
 whitenoise
 zope.interface
+django-cloudinary-storage
+cloudinary

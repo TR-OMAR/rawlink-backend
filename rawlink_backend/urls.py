@@ -22,12 +22,3 @@ urlpatterns = [
     path('api/auth/', include('djoser.urls')),
     path('api/auth/', include('djoser.urls.jwt')),
 ]
-
-# 4. SERVE MEDIA FILES (Images)
-# This block forces Django to serve user-uploaded files directly, 
-# which is necessary for Render's local disk storage to work.
-urlpatterns += [
-    re_path(r'^media/(?P<path>.*)$', serve, {
-        'document_root': settings.MEDIA_ROOT,
-    }),
-]

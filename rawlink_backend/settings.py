@@ -55,6 +55,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'cloudinary_storage',
+    'cloudinary'
 
     # Local app
     'api.apps.ApiConfig',
@@ -221,3 +223,17 @@ else:
             "BACKEND": "channels.layers.InMemoryChannelLayer",
         },
     }
+
+
+# Cloudinary Configuration
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': 'do8p3on1d',  # 🔴 Replace with your Dashboard info
+    'API_KEY': '192858953275565',        # 🔴 Replace with your Dashboard info
+    'API_SECRET': 'ihx-u-IXkroZ0CdOxe9EV9ACA_o',  # 🔴 Replace with your Dashboard info
+}
+
+# Tell Django to use Cloudinary for uploaded media
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
+# Keep Static files (CSS/JS) on Whitenoise (since you already have that setup)
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
