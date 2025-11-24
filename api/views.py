@@ -117,15 +117,28 @@ class ListingViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = Listing.objects.filter(status='available')
+        
+        # Get parameters
         category = self.request.query_params.get('category')
         location = self.request.query_params.get('location')
+        country = self.request.query_params.get('country') # <--- ADDED
+        city = self.request.query_params.get('city')       # <--- ADDED
         search = self.request.query_params.get('search')
         ordering = self.request.query_params.get('ordering')
         
+        # Apply Filters
         if category:
             queryset = queryset.filter(category=category)
+        
+        if country:  # <--- ADDED FILTER LOGIC
+            queryset = queryset.filter(country=country)
+
+        if city:     # <--- ADDED FILTER LOGIC
+            queryset = queryset.filter(city__icontains=city)
+
         if location:
             queryset = queryset.filter(location__icontains=location)
+            
         if search:
              queryset = queryset.filter(Q(title__icontains=search) | Q(description__icontains=search))
         
