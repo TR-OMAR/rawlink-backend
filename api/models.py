@@ -5,15 +5,20 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 
-# --- 1. Custom User Manager ---
+# ---------------------------------------------------------
+# User Manager
+# ---------------------------------------------------------
 class CustomUserManager(BaseUserManager):
     """
-    Custom user model manager where email is the unique identifier
-    for authentication instead of usernames.
+    Manager for the custom User model.
+
+    Email is used as the primary login field instead of username.
     """
+
     def create_user(self, username, email, password, role=None, **extra_fields):
         if not email:
-            raise ValueError('The Email must be set')
+            raise ValueError("Email address is required")
+
         email = self.normalize_email(email)
         user = self.model(username=username, email=email, role=role, **extra_fields)
         user.set_password(password)
@@ -21,34 +26,41 @@ class CustomUserManager(BaseUserManager):
         return user
 
     def create_superuser(self, username, email, password, **extra_fields):
-        extra_fields.setdefault('is_staff', True)
-        extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('is_active', True)
-        extra_fields.setdefault('role', 'admin')
+        """
+        Creates a superuser with all necessary permissions.
+        """
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+        extra_fields.setdefault("is_active", True)
+        extra_fields.setdefault("role", "admin")
 
-        if extra_fields.get('is_staff') is not True:
-            raise ValueError('Superuser must have is_staff=True.')
-        if extra_fields.get('is_superuser') is not True:
-            raise ValueError('Superuser must have is_superuser=True.')
+        if not extra_fields.get("is_staff"):
+            raise ValueError("Superuser requires is_staff=True")
+        if not extra_fields.get("is_superuser"):
+            raise ValueError("Superuser requires is_superuser=True")
 
-        # create_user accepts role as a kwarg in extra_fields
         return self.create_user(username, email, password, **extra_fields)
 
 
-# --- 2. Custom User Model ---
+# ---------------------------------------------------------
+# User Model
+# ---------------------------------------------------------
 class User(AbstractUser):
+    """
+    Custom user model that authenticates using email instead of username.
+    """
+
     ROLE_CHOICES = (
-        ('vendor', 'Vendor'),
-        ('buyer', 'Buyer'),
-        ('admin', 'Admin'),
+        ("vendor", "Vendor"),
+        ("buyer", "Buyer"),
+        ("admin", "Admin"),
     )
 
-    # Use email as the unique identifier
-    email = models.EmailField('email address', unique=True)
+    email = models.EmailField(unique=True)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, blank=True, null=True)
 
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username', 'role']
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["username", "role"]
 
     objects = CustomUserManager()
 
@@ -56,9 +68,14 @@ class User(AbstractUser):
         return self.email
 
 
-# --- 3. Profile Model ---
+# ---------------------------------------------------------
+# User Profile
+# ---------------------------------------------------------
 class Profile(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile')
+    """
+    Additional user details stored separately from the main User model.
+    """
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile")
     name = models.CharField(max_length=255, blank=True)
     phone = models.CharField(max_length=20, blank=True)
     location = models.CharField(max_length=255, blank=True)
@@ -67,73 +84,94 @@ class Profile(models.Model):
         return f"{self.user.email}'s Profile"
 
 
-# --- 4. Wallet Model ---
+# ---------------------------------------------------------
+# Wallet
+# ---------------------------------------------------------
 class Wallet(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wallet')
+    """
+    Each user has a wallet that stores available balance.
+    """
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="wallet")
     balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
     def __str__(self):
         return f"{self.user.email}'s Wallet (Balance: {self.balance})"
 
 
-# --- 5. Transaction Model ---
+# ---------------------------------------------------------
+# Transactions
+# ---------------------------------------------------------
 class Transaction(models.Model):
+    """
+    Represents money movements in a user's wallet.
+    """
+
     TRANSACTION_TYPES = (
-        ('sale', 'Sale'),
-        ('purchase', 'Purchase'),
-        ('withdrawal', 'Withdrawal'),
-        ('credit', 'Credit'),
+        ("sale", "Sale"),
+        ("purchase", "Purchase"),
+        ("withdrawal", "Withdrawal"),
+        ("credit", "Credit"),
     )
-    wallet = models.ForeignKey(Wallet, related_name='transactions', on_delete=models.CASCADE)
+
+    wallet = models.ForeignKey(Wallet, related_name="transactions", on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     type = models.CharField(max_length=10, choices=TRANSACTION_TYPES)
     timestamp = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['-timestamp']
+        ordering = ["-timestamp"]
 
     def __str__(self):
         return f"{self.type} of {self.amount} for {self.wallet.user.email}"
 
 
-# --- 6. Listing Model (merged with additional country/city/postal fields) ---
+# ---------------------------------------------------------
+# Listing (Vendor Items)
+# ---------------------------------------------------------
 class Listing(models.Model):
+    """
+    Marketplace listing posted by vendors.
+    Includes category, pricing, and optional geographic fields.
+    """
+
     CATEGORY_CHOICES = (
-        ('plastic', 'Plastic'),
-        ('metal', 'Metal'),
-        ('paper', 'Paper'),
-        ('e-waste', 'E-waste'),
-        ('glass', 'Glass'),
-        ('other', 'Other'),
+        ("plastic", "Plastic"),
+        ("metal", "Metal"),
+        ("paper", "Paper"),
+        ("e-waste", "E-waste"),
+        ("glass", "Glass"),
+        ("other", "Other"),
     )
+
     UNIT_CHOICES = (
-        ('kg', 'kg'),
-        ('tons', 'tons'),
+        ("kg", "kg"),
+        ("tons", "tons"),
     )
+
     STATUS_CHOICES = (
-        ('available', 'Available'),
-        ('in-transit', 'In Transit'),
-        ('completed', 'Completed'),
+        ("available", "Available"),
+        ("in-transit", "In Transit"),
+        ("completed", "Completed"),
     )
 
     COUNTRY_CHOICES = (
-        ('MY', 'Malaysia'),
-        ('SG', 'Singapore'),
-        ('ID', 'Indonesia'),
-        ('TH', 'Thailand'),
-        ('VN', 'Vietnam'),
-        ('PH', 'Philippines'),
-        ('IN', 'India'),
-        ('PK', 'Pakistan'),
-        ('BD', 'Bangladesh'),
-        ('LK', 'Sri Lanka'),
-        ('KH', 'Cambodia'),
-        ('LA', 'Laos'),
-        ('MM', 'Myanmar'),
-        ('BN', 'Brunei'),
+        ("MY", "Malaysia"),
+        ("SG", "Singapore"),
+        ("ID", "Indonesia"),
+        ("TH", "Thailand"),
+        ("VN", "Vietnam"),
+        ("PH", "Philippines"),
+        ("IN", "India"),
+        ("PK", "Pakistan"),
+        ("BD", "Bangladesh"),
+        ("LK", "Sri Lanka"),
+        ("KH", "Cambodia"),
+        ("LA", "Laos"),
+        ("MM", "Myanmar"),
+        ("BN", "Brunei"),
     )
 
-    vendor = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='listings', on_delete=models.CASCADE)
+    vendor = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="listings", on_delete=models.CASCADE)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
@@ -141,15 +179,14 @@ class Listing(models.Model):
     unit = models.CharField(max_length=5, choices=UNIT_CHOICES)
     price_per_unit = models.DecimalField(max_digits=10, decimal_places=2, help_text="Price in RM")
 
-    # New location-related fields
-    country = models.CharField(max_length=50, choices=COUNTRY_CHOICES, default='MY')
-    city = models.CharField(max_length=100, blank=True, default='')
-    postal_code = models.CharField(max_length=20, blank=True, default='')
-    # Keep 'location' for backward compatibility
-    location = models.CharField(max_length=255, blank=True)
+    # Geographic information
+    country = models.CharField(max_length=50, choices=COUNTRY_CHOICES, default="MY")
+    city = models.CharField(max_length=100, blank=True, default="")
+    postal_code = models.CharField(max_length=20, blank=True, default="")
+    location = models.CharField(max_length=255, blank=True)  # Legacy field
 
-    image = models.ImageField(upload_to='listings_images/', blank=True, null=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='available')
+    image = models.ImageField(upload_to="listings_images/", blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="available")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -157,45 +194,62 @@ class Listing(models.Model):
         return self.title
 
 
-# --- 7. Order Model ---
+# ---------------------------------------------------------
+# Orders
+# ---------------------------------------------------------
 class Order(models.Model):
+    """
+    Represents a purchase made by a buyer for a specific listing.
+    """
+
     STATUS_CHOICES = (
-        ('pending', 'Pending'),
-        ('confirmed', 'Confirmed'),
-        ('completed', 'Completed'),
-        ('cancelled', 'Cancelled'),
+        ("pending", "Pending"),
+        ("confirmed", "Confirmed"),
+        ("completed", "Completed"),
+        ("cancelled", "Cancelled"),
     )
-    buyer = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='orders', on_delete=models.CASCADE)
-    listing = models.ForeignKey(Listing, related_name='orders', on_delete=models.SET_NULL, null=True)
-    listing_title = models.CharField(max_length=255, blank=True)
-    vendor = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='sales', on_delete=models.CASCADE)
+
+    buyer = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="orders", on_delete=models.CASCADE)
+    listing = models.ForeignKey(Listing, related_name="orders", on_delete=models.SET_NULL, null=True)
+    listing_title = models.CharField(max_length=255, blank=True)  # Stored for history even if listing changes
+    vendor = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="sales", on_delete=models.CASCADE)
 
     quantity_bought = models.DecimalField(max_digits=10, decimal_places=2)
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Order {self.id} by {self.buyer.email}"
 
 
-# --- 8. Message Model ---
+# ---------------------------------------------------------
+# Messages (Chat)
+# ---------------------------------------------------------
 class Message(models.Model):
-    sender = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='sent_messages', on_delete=models.CASCADE)
-    receiver = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='received_messages', on_delete=models.CASCADE)
+    """
+    private message model for real-time chat.
+    """
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="sent_messages", on_delete=models.CASCADE)
+    receiver = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="received_messages", on_delete=models.CASCADE)
     content = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['timestamp']
+        ordering = ["timestamp"]
 
     def __str__(self):
         return f"From {self.sender.email} to {self.receiver.email}"
 
 
-# --- 9. Signals to auto-create Profile and Wallet ---
+# ---------------------------------------------------------
+# Signals: auto-create Profile + Wallet
+# ---------------------------------------------------------
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_user_profile_and_wallet(sender, instance, created, **kwargs):
+    """
+    Automatically create a Profile and Wallet whenever a new user is created.
+    """
     if created:
         Profile.objects.create(user=instance)
         Wallet.objects.create(user=instance)
@@ -203,8 +257,10 @@ def create_user_profile_and_wallet(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def save_user_profile_and_wallet(sender, instance, **kwargs):
-    # If profile/wallet were just created this will still succeed.
-    if hasattr(instance, 'profile'):
+    """
+    Ensure profile and wallet are saved if they already exist.
+    """
+    if hasattr(instance, "profile"):
         instance.profile.save()
-    if hasattr(instance, 'wallet'):
+    if hasattr(instance, "wallet"):
         instance.wallet.save()

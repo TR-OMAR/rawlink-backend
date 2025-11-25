@@ -1,6 +1,6 @@
 """
 Django settings for rawlink_backend project.
-Merged and cleaned version.
+
 """
 import os
 from pathlib import Path
@@ -16,45 +16,45 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # -----------------------------------------------------------
 # Load Environment Variables
 # -----------------------------------------------------------
-# Reads .env at project root (BASE_DIR / '.env')
-load_dotenv(BASE_DIR / '.env')
+load_dotenv(BASE_DIR / '.env')  # Load variables from .env file
 
 # -----------------------------------------------------------
-# Security
+# Security Settings
 # -----------------------------------------------------------
-# SECRET_KEY: prefer env var; fallback to a dev key (DO NOT use fallback in production)
+# Secret key for Django; use environment variable in production
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-key')
 
-# DEBUG:
-# - If DEBUG env var explicitly set to 'True' use it.
-# - Otherwise, treat presence of RENDER env var as production (DEBUG=False).
+# Debug mode: only enable for local development
 DEBUG = os.environ.get('DEBUG') == 'True' or ('RENDER' not in os.environ)
-# (If you want stricter behavior, change above to only rely on env var.)
 
-# -----------------------------------------------------------
-# Allowed Hosts
-# -----------------------------------------------------------
+# Allowed hosts for incoming requests
 ALLOWED_HOSTS = []
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
-# 3. Handle SSL/HTTPS behind Render's proxy
+# Ensure proper handling of HTTPS behind proxies (e.g., Render)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 CSRF_COOKIE_SECURE = True
 SESSION_COOKIE_SECURE = True
+
 # -----------------------------------------------------------
 # Installed Apps
 # -----------------------------------------------------------
 INSTALLED_APPS = [
+    # Channels / ASGI support
     'daphne',
     'channels',
+
+    # Django core apps
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    # Cloudinary for media storage
     'cloudinary_storage',
     'cloudinary',
 
@@ -73,7 +73,7 @@ INSTALLED_APPS = [
 # -----------------------------------------------------------
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # serve static files in production
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # Serve static files efficiently
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -84,7 +84,7 @@ MIDDLEWARE = [
 ]
 
 # -----------------------------------------------------------
-# URL / WSGI / ASGI
+# URL / WSGI / ASGI Configuration
 # -----------------------------------------------------------
 ROOT_URLCONF = 'rawlink_backend.urls'
 WSGI_APPLICATION = 'rawlink_backend.wsgi.application'
@@ -110,7 +110,7 @@ TEMPLATES = [
 ]
 
 # -----------------------------------------------------------
-# Database (Neon/Render or local fallback)
+# Database Configuration
 # -----------------------------------------------------------
 DATABASE_URL = os.environ.get('DATABASE_URL')
 DATABASES = {
@@ -140,20 +140,19 @@ USE_I18N = True
 USE_TZ = True
 
 # -----------------------------------------------------------
-# Static / Media
+# Static & Media Files
 # -----------------------------------------------------------
 STATIC_URL = 'static/'
-# when running on Render/production, collectstatic should populate STATIC_ROOT
 STATIC_ROOT = BASE_DIR / 'staticfiles_build' / 'static'
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Whitenoise staticfiles storage in production (only use when DEBUG is False)
-if not DEBUG:
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# Used Whitenoise for production static file handling
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # -----------------------------------------------------------
-# Default primary key field
+# Default primary key field type
 # -----------------------------------------------------------
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -163,20 +162,20 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'api.User'
 
 # -----------------------------------------------------------
-# CORS
+# CORS and CSRF
 # -----------------------------------------------------------
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "https://rawlink-frontend.vercel.app",
     'https://rawlink-api.onrender.com',
-    # add frontend host(s) here when available
 ]
+
 CSRF_TRUSTED_ORIGINS = [
-    "https://rawlink-frontend.vercel.app", # <--- Add your Vercel URL here
+    "https://rawlink-frontend.vercel.app",
 ]
 
 # -----------------------------------------------------------
-# Django REST Framework
+# Django REST Framework Settings
 # -----------------------------------------------------------
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -185,7 +184,7 @@ REST_FRAMEWORK = {
 }
 
 # -----------------------------------------------------------
-# JWT Settings
+# JWT Settings (Simple JWT)
 # -----------------------------------------------------------
 SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('JWT',),
@@ -206,9 +205,10 @@ DJOSER = {
 }
 
 # -----------------------------------------------------------
-# Channels / WebSocket Layer (Redis in prod, InMemory in dev)
+# Channels / WebSocket Layer
 # -----------------------------------------------------------
 if 'REDIS_URL' in os.environ:
+    # Production: Redis-backed channel layer
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
@@ -218,22 +218,20 @@ if 'REDIS_URL' in os.environ:
         },
     }
 else:
+    # Development: In-memory channel layer
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels.layers.InMemoryChannelLayer",
         },
     }
 
-
-# Cloudinary Configuration
+# -----------------------------------------------------------
+# Cloudinary Media Storage
+# -----------------------------------------------------------
 CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': 'do8p3on1d',  # 🔴 Replace with your Dashboard info
-    'API_KEY': '192858953275565',        # 🔴 Replace with your Dashboard info
-    'API_SECRET': 'ihx-u-IXkroZ0CdOxe9EV9ACA_o',  # 🔴 Replace with your Dashboard info
+    'CLOUD_NAME': 'do8p3on1d',        # cloud name
+    'API_KEY': '192858953275565',     # API key
+    'API_SECRET': 'ihx-u-IXkroZ0CdOxe9EV9ACA_o',  # API secret
 }
 
-# Tell Django to use Cloudinary for uploaded media
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-
-# Keep Static files (CSS/JS) on Whitenoise (since you already have that setup)
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'

@@ -6,20 +6,21 @@ from .views import (
     ListingViewSet,
     OrderViewSet,
     MessageViewSet,
-    UserViewSet
+    UserViewSet,
 )
 
-# Create a router
+# Initialize DRF router
 router = DefaultRouter()
 
-# Register our ViewSets
+# Register API endpoints for each ViewSet
 router.register(r'profiles', ProfileViewSet, basename='profile')
 router.register(r'wallets', WalletViewSet, basename='wallet')
 router.register(r'listings', ListingViewSet, basename='listing')
 router.register(r'orders', OrderViewSet, basename='order')
 router.register(r'messages', MessageViewSet, basename='message')
-router.register(r'users', UserViewSet, basename='user') # <-- MUST BE HERE
+router.register(r'users', UserViewSet, basename='user')  # User endpoints must be registered
 
+# Include router URLs in app's URL patterns
 urlpatterns = [
     path('', include(router.urls)),
 ]

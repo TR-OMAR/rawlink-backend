@@ -1,8 +1,9 @@
 from django.urls import re_path
-from . import consumers # We will create this file next
+from . import consumers
 
+
+# WebSocket routes used by Django Channels.
+# Each path connects a client to the corresponding consumer.
 websocket_urlpatterns = [
-    # This regex matches a WebSocket URL for chat
-    # We will use this URL in our frontend
-    re_path(r'ws/chat/$', consumers.ChatConsumer.as_asgi()),
+    re_path(r"ws/chat/$", consumers.ChatConsumer.as_asgi()),
 ]

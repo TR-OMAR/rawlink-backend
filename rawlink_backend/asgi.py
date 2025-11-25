@@ -1,22 +1,23 @@
 import os
 from django.core.asgi import get_asgi_application
 
+# Set the default Django settings module for the ASGI application
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'rawlink_backend.settings')
 
-# 1. Initialize Django ASGI application FIRST
-# This step ensures django.setup() is called and apps are loaded.
+# Initialize Django ASGI application first
 django_asgi_app = get_asgi_application()
 
-# 2. Now it is safe to import middleware/routing that relies on models
+# Import Channels routing and custom middleware after Django setup
 from channels.routing import ProtocolTypeRouter, URLRouter
 from api.middleware import JwtAuthMiddleware
-from api import routing  # Assuming you have a routing.py
+from api import routing  # Contains WebSocket URL patterns
 
+# Define the ASGI application with HTTP and WebSocket support
 application = ProtocolTypeRouter({
-    "http": django_asgi_app,
+    "http": django_asgi_app,  # Handles traditional HTTP requests
     "websocket": JwtAuthMiddleware(
         URLRouter(
-            routing.websocket_urlpatterns
+            routing.websocket_urlpatterns  # Routes WebSocket connections
         )
     ),
 })
